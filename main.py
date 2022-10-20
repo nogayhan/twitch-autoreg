@@ -74,7 +74,7 @@ class Autoreg:
             if 'error_code' in resp.json():
                 if resp.json()['error_code'] == 1000:
                     print("Bad captcha")
-                    arkose_token['solver'].report(arkose_token['captchaId'], False)
+                    arkose_token['solver'].report(arkose_token['result']['captchaId'], False)
                 else:
                     print(resp.json()['error_description'])
             else:
@@ -87,7 +87,7 @@ class Autoreg:
         except Exception as error:
             print("Exception with ", resp, error)
             return False
-        arkose_token['solver'].report(arkose_token['captchaId'], True)
+        arkose_token['solver'].report(arkose_token['result']['captchaId'], True)
         token = resp['access_token']
         acc_string = f'{nickname}:{password}:{token}'
         print(f'Account {self.done + 1} created ({acc_string})')
@@ -124,9 +124,8 @@ class Autoreg:
             return False
 
     def send_register_request(self, email, password, arkose_token, nickname, proxy):
-        print(email, password, nickname)
-        cap_token = arkose_token.split('|')[0]
-        cap_token += '|r=eu-west-1|metabgclr=transparent|guitextcolor=%23000000|metaiconclr=%23757575|meta=3|lang=en|pk=E5554D43-23CC-1982-971D-6A2262A2CA24|at=40|atp=2|cdn_url=https%3A%2F%2Fclient-api.arkoselabs.com%2Fcdn%2Ffc|lurl=https%3A%2F%2Faudio-eu-west-1.arkoselabs.com|surl=https%3A%2F%2Fclient-api.arkoselabs.com'
+        # cap_token = arkose_token.split('|')[0]
+        # cap_token += '|r=eu-west-1|metabgclr=transparent|guitextcolor=%23000000|metaiconclr=%23757575|meta=3|lang=en|pk=E5554D43-23CC-1982-971D-6A2262A2CA24|at=40|atp=2|cdn_url=https%3A%2F%2Fclient-api.arkoselabs.com%2Fcdn%2Ffc|lurl=https%3A%2F%2Faudio-eu-west-1.arkoselabs.com|surl=https%3A%2F%2Fclient-api.arkoselabs.com'
         try:
             return requests.post(
                 'https://passport.twitch.tv/register',
@@ -166,7 +165,8 @@ class Autoreg:
         except twocaptcha.solver.TimeoutException:
             print("Too long solving captcha")
             return False
-        except twocaptcha.solver.ApiException:
+        except twocaptcha.solver.ApiException as api_exception:
+            print('Exception with solving captcha, error:', str(api_exception))
             return False
         if result['code']:
             print("Recaptcha is done")
