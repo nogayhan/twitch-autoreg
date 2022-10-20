@@ -1,5 +1,6 @@
 from typing import Union
 
+import argparse
 import requests
 import random
 import string
@@ -9,11 +10,6 @@ import twocaptcha.solver
 
 from Proxy import Proxy
 import nickname_generator
-# from python_rucaptcha.enums import ReCaptchaEnm
-# from python_rucaptcha.ReCaptcha import ReCaptcha
-from python_rucaptcha.enums import FunCaptchaEnm
-from python_rucaptcha.FunCaptcha import FunCaptcha
-from pprint import pprint
 from threading import Thread
 from twocaptcha import TwoCaptcha
 
@@ -150,7 +146,7 @@ class Autoreg:
             print('Error with sending request for register:', error)
             return False
 
-    def get_recaptcha_token(self) -> Union[str, bool]:
+    def get_recaptcha_token(self) -> Union[dict, bool]:
         print("Waiting for recaptcha")
         config = {
             'server': 'rucaptcha.com',
@@ -168,14 +164,18 @@ class Autoreg:
         except twocaptcha.solver.ApiException as api_exception:
             print('Exception with solving captcha, error:', str(api_exception))
             return False
-        if result['code']:
-            print("Recaptcha is done")
+        except twocaptcha.api.NetworkException as netword_error:
+            print("Can't connect to rucaptcha, error:", str(netword_error))
+            return False
         else:
-            print("No captcha token, response: ", result)
-            if result['errorBody'] == 'ERROR_ZERO_BALANCE':
-                print("Zero balance!")
-                self.need_stop = True
-        return {'solver': solver, 'result': result}
+            if result['code']:
+                print("Recaptcha is done")
+            else:
+                print("No captcha token, response: ", result)
+                if result['errorBody'] == 'ERROR_ZERO_BALANCE':
+                    print("Zero balance!")
+                    self.need_stop = True
+            return {'solver': solver, 'result': result}
 
     def get_random_email(self) -> str:
         return self.get_random_string(random.randint(15, 30)) + self.mail_domain
@@ -192,10 +192,17 @@ class Autoreg:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Software for creating twitch accounts"
+    )
+    parser.add_argument('--count', type=int, help='Number of accounts to register', required=True)
+    parser.add_argument('--threads', type=int, help='Number of threads', required=True)
+    parser.add_argument('--rucaptcha', type=str, help='Token for rucaptcha', default='50abbb7cbfe85b9ee319c9b74389c2f6')
+    args = parser.parse_args()
     test = Autoreg()
-    test.rucaptcha_token = '50abbb7cbfe85b9ee319c9b74389c2f6'
-    test.count = 100
-    test.threads_count = 1
+    test.rucaptcha_token = args.rucaptcha
+    test.count = args.count
+    test.threads_count = args.threads
     test.load_proxies()
     test.start()
     # test.load_proxies()
